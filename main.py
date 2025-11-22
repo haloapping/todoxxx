@@ -1,0 +1,17 @@
+from scalar_fastapi import get_scalar_api_reference
+
+from app import app
+from task import task_router
+from user import user_router
+
+app.include_router(user_router)
+app.include_router(task_router)
+
+
+@app.get("/", include_in_schema=False)
+async def scalar_html():
+    return get_scalar_api_reference(
+        title="Todo API",
+        openapi_url=app.openapi_url,
+        scalar_proxy_url="https://proxy.scalar.com",
+    )
