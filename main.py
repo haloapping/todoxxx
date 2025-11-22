@@ -1,9 +1,10 @@
+from fastapi import FastAPI
 from scalar_fastapi import get_scalar_api_reference
 
-from app import app
 from task import task_router
 from user import user_router
 
+app = FastAPI(summary="Todo App", description="Todo App")
 app.include_router(user_router)
 app.include_router(task_router)
 
