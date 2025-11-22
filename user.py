@@ -13,12 +13,6 @@ from db import pool
 user_router = APIRouter(prefix="/users", tags=["users"])
 
 
-class RegisterUser(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
 def pwd_validation(pwd: str):
     n_lowercase = 0
     n_uppercase = 0
@@ -57,10 +51,16 @@ def pwd_validation(pwd: str):
     return validation
 
 
+class RegisterUserReq(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+
 @user_router.post("/register")
-def register(register_user: RegisterUser):
+def register(req: RegisterUserReq):
     try:
-        validation = pwd_validation(register_user.password)
+        validation = pwd_validation(req.password)
         if len(validation):
             return {"validation": validation}
 
@@ -76,10 +76,10 @@ def register(register_user: RegisterUser):
             """
             params = [
                 str(uuid4()),
-                register_user.username,
-                register_user.email,
+                req.username,
+                req.email,
                 bcrypt.hashpw(
-                    register_user.password.encode(), bcrypt.gensalt()
+                    req.password.encode(), bcrypt.gensalt()
                 ).decode(),
             ]
             user = cur.execute(q, params).fetchone()
@@ -89,13 +89,13 @@ def register(register_user: RegisterUser):
     return {"message": "user is registered", "data": user}
 
 
-class RegisterUser(BaseModel):
+class LoginUserReq(BaseModel):
     username: str
     password: str
 
 
 @user_router.post("/login")
-def login(login_user: RegisterUser):
+def login(req: LoginUserReq):
     try:
         with (
             pool.connection() as conn,
@@ -103,11 +103,11 @@ def login(login_user: RegisterUser):
             conn.cursor(row_factory=dict_row) as cur,
         ):
             q = "SELECT id, password FROM users WHERE username = %s"
-            user = cur.execute(q, [login_user.username]).fetchone()
+            user = cur.execute(q, [req.username]).fetchone()
             print(user)
             if user:
                 if bcrypt.checkpw(
-                    login_user.password.encode(), user["password"].encode()
+                    req.password.encode(), user["password"].encode()
                 ):
                     token_jwt = jwt.encode(
                         payload={"id": user["id"]}, key="secret", algorithm="HS256"
