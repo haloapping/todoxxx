@@ -4,10 +4,11 @@ from uuid import uuid4
 
 import bcrypt
 import jwt
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from psycopg.rows import dict_row
 from pydantic import BaseModel, EmailStr
 
+from auth import verify_token
 from db import pool
 
 user_router = APIRouter(prefix="/users", tags=["users"])
@@ -78,9 +79,7 @@ def register(req: RegisterUserReq):
                 str(uuid4()),
                 req.username,
                 req.email,
-                bcrypt.hashpw(
-                    req.password.encode(), bcrypt.gensalt()
-                ).decode(),
+                bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode(),
             ]
             user = cur.execute(q, params).fetchone()
     except Exception as e:
@@ -104,19 +103,39 @@ def login(req: LoginUserReq):
         ):
             q = "SELECT id, password FROM users WHERE username = %s"
             user = cur.execute(q, [req.username]).fetchone()
-            print(user)
-            if user:
-                if bcrypt.checkpw(
-                    req.password.encode(), user["password"].encode()
-                ):
-                    token_jwt = jwt.encode(
-                        payload={"id": user["id"]}, key="secret", algorithm="HS256"
-                    )
+            is_password_valid = bcrypt.checkpw(
+                req.password.encode(), user["password"].encode()
+            )
+            if user and is_password_valid:
+                print("password valid")
+                token_jwt = jwt.encode(
+                    payload={"id": user["id"]}, key="secret", algorithm="HS256"
+                )
 
-                    return {
-                        "token": token_jwt,
-                        "iat": datetime.now(timezone.utc),
-                        "exp": datetime.now(timezone.utc) + timedelta(hours=3),
-                    }
+                return {
+                    "token": token_jwt,
+                    "iat": datetime.now(timezone.utc),
+                    "exp": datetime.now(timezone.utc) + timedelta(hours=3),
+                }
+            else:
+                return {
+                    "message": "username or password invalid",
+                }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@user_router.post("/bio")
+def get_bio(payload=Depends(verify_token)):
+    try:
+        with (
+            pool.connection() as conn,
+            conn.transaction(),
+            conn.cursor(row_factory=dict_row) as cur,
+        ):
+            q = "SELECT id, username, password FROM users WHERE id = %s"
+            user = cur.execute(q, [payload["id"]]).fetchone()
+
+        return user
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

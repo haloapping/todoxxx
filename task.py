@@ -13,12 +13,6 @@ task_router = APIRouter(
 )
 
 
-class CreateTask(BaseModel):
-    user_id: str
-    title: str
-    description: str
-
-
 @task_router.get(
     "/",
 )
@@ -50,15 +44,20 @@ def get_task_by_id(id: str):
                 SELECT * FROM tasks
                 WHERE id = %s
             """
-            task = cur.execute(q, [id]).fetchall()
+            task = cur.execute(q, [id]).fetchone()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return task
 
 
+class CreateTaskReq(BaseModel):
+    title: str
+    description: str
+
+
 @task_router.post("/")
-def create_task(task: CreateTask):
+def create_task(task: CreateTaskReq, payload=Depends(verify_token)):
     try:
         with (
             pool.connection() as conn,
@@ -70,26 +69,24 @@ def create_task(task: CreateTask):
                 VALUES(%s, %s, %s, %s)
                 RETURNING *
             """
-            params = [str(uuid4()), task.user_id, task.title, task.description]
-            task = cur.execute(q, params).fetchall()[0]
+            params = [str(uuid4()), payload["id"], task.title, task.description]
+            task = cur.execute(q, params).fetchone()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return task
 
 
-class UpdateTask(BaseModel):
+class UpdateTaskReq(BaseModel):
     user_id: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
 
 
 @task_router.patch(f"/{id}")
-def update_task_by(id: str, task: UpdateTask):
+def update_task_by(id: str, task: UpdateTaskReq):
     try:
         body = task.model_dump()
-        print(body)
-
         if not body:
             return HTTPException(status.HTTP_400_BAD_REQUEST)
 
@@ -113,7 +110,7 @@ def update_task_by(id: str, task: UpdateTask):
                 WHERE id = %s
                 RETURNING *
             """
-            task = cur.execute(q, params).fetchall()[0]
+            task = cur.execute(q, params).fetchone()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -133,7 +130,7 @@ def delete_task_by_id(id: str):
                 WHERE id = %s
                 RETURNING *
             """
-            task = cur.execute(q, [id]).fetchall()[0]
+            task = cur.execute(q, [id]).fetchone()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
