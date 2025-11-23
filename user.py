@@ -5,6 +5,7 @@ from uuid import uuid4
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel, EmailStr
 
@@ -111,16 +112,21 @@ def login(req: LoginUserReq):
                 token_jwt = jwt.encode(
                     payload={"id": user["id"]}, key="secret", algorithm="HS256"
                 )
-
-                return {
-                    "token": token_jwt,
-                    "iat": datetime.now(timezone.utc),
-                    "exp": datetime.now(timezone.utc) + timedelta(hours=3),
-                }
+                return JSONResponse(
+                    content={
+                        "token": token_jwt,
+                        "iat": datetime.now(timezone.utc).isoformat(),
+                        "exp": (
+                            datetime.now(timezone.utc) + timedelta(hours=3)
+                        ).isoformat(),
+                    }
+                )
             else:
-                return {
-                    "message": "username or password invalid",
-                }
+                return JSONResponse(
+                    content={
+                        "message": "username or password invalid",
+                    }
+                )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -136,6 +142,6 @@ def get_bio(payload=Depends(verify_token)):
             q = "SELECT id, username, password FROM users WHERE id = %s"
             user = cur.execute(q, [payload["id"]]).fetchone()
 
-        return user
+        return JSONResponse(content={"data": user})
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
