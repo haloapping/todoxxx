@@ -54,14 +54,14 @@ def pwd_validation(pwd: str):
     return validation
 
 
-class RegisterUserReq(BaseModel):
+class RegisterReq(BaseModel):
     username: str = Field(json_schema_extra={"format": "string"})
     email: EmailStr = Field(json_schema_extra={"format": "string"})
     password: str = Field(json_schema_extra={"format": "string"})
 
 
 @user_router.post("/register")
-def register(req: RegisterUserReq):
+def register(req: RegisterReq):
     try:
         validation = pwd_validation(req.password)
         if len(validation):
@@ -90,13 +90,13 @@ def register(req: RegisterUserReq):
     return {"message": "user is registered", "data": user}
 
 
-class LoginUserReq(BaseModel):
+class LoginReq(BaseModel):
     username: str = Field(json_schema_extra={"format": "string"})
     password: str = Field(json_schema_extra={"format": "string"})
 
 
 @user_router.post("/login")
-def login(req: LoginUserReq):
+def login(req: LoginReq):
     try:
         with (
             pool.connection() as conn,
@@ -131,7 +131,13 @@ def login(req: LoginUserReq):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@user_router.post("/bio")
+class BioResp(BaseModel):
+    id: str = Field(json_schema_extra={"format": "string"})
+    username: str = Field(json_schema_extra={"format": "string"})
+    password: str = Field(json_schema_extra={"format": "string"})
+
+
+@user_router.post("/bio", response_model=BioResp)
 def get_bio(payload=Depends(verify_token)):
     try:
         with (
@@ -142,6 +148,6 @@ def get_bio(payload=Depends(verify_token)):
             q = "SELECT id, username, password FROM users WHERE id = %s"
             user = jsonable_encoder(cur.execute(q, [payload["id"]]).fetchone())
 
-        return JSONResponse(content={"data": user})
+        return JSONResponse(content=user)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

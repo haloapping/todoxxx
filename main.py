@@ -18,5 +18,6 @@ async def scalar_html():
         scalar_proxy_url="https://proxy.scalar.com",
     )
 
+
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
