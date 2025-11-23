@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from scalar_fastapi import get_scalar_api_reference
+import uvicorn
 
 from task import task_router
 from user import user_router
@@ -16,3 +17,6 @@ async def scalar_html():
         openapi_url=app.openapi_url,
         scalar_proxy_url="https://proxy.scalar.com",
     )
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", reload=True)
