@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from psycopg.rows import dict_row
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from auth import verify_token
 from db import pool
@@ -16,57 +17,60 @@ from db import pool
 user_router = APIRouter(prefix="/users", tags=["users"])
 
 
-def pwd_validation(pwd: str):
-    n_lowercase = 0
-    n_uppercase = 0
-    n_punct = 0
-    n_digit = 0
-    validation = []
-
-    for c in pwd:
-        if c in string.ascii_lowercase:
-            n_lowercase += 1
-
-        if c in string.ascii_uppercase:
-            n_uppercase += 1
-
-        if c in string.punctuation:
-            n_punct += 1
-
-        if c.isdigit():
-            n_digit += 1
-
-    if n_lowercase < 1:
-        validation.append("number of lowercase min 1")
-
-    if n_uppercase < 1:
-        validation.append("number of uppercase min 1")
-
-    if n_punct < 1:
-        validation.append("number of punctuation min 1")
-
-    if n_digit < 1:
-        validation.append("number of digit min 1")
-
-    if len(pwd) < 8:
-        validation.append("number of digit min 1")
-
-    return validation
-
-
 class RegisterReq(BaseModel):
-    username: str = Field(json_schema_extra={"format": "string"})
-    email: EmailStr = Field(json_schema_extra={"format": "string"})
-    password: str = Field(json_schema_extra={"format": "string"})
+    username: str = Field(min_length=1, json_schema_extra={"format": "string"})
+    email: EmailStr = Field(min_length=1, json_schema_extra={"format": "string"})
+    password: str = Field(min_length=1, json_schema_extra={"format": "string"})
+
+    @field_validator("password")
+    def validate_password(cls, password: str):
+        n_lowercase = 0
+        n_uppercase = 0
+        n_punct = 0
+        n_digit = 0
+        validation = []
+
+        for c in password:
+            if c in string.ascii_lowercase:
+                n_lowercase += 1
+
+            if c in string.ascii_uppercase:
+                n_uppercase += 1
+
+            if c in string.punctuation:
+                n_punct += 1
+
+            if c.isdigit():
+                n_digit += 1
+
+        if n_lowercase < 1:
+            validation.append("number of lowercase min 1")
+
+        if n_uppercase < 1:
+            validation.append("number of uppercase min 1")
+
+        if n_punct < 1:
+            validation.append("number of punctuation min 1")
+
+        if n_digit < 1:
+            validation.append("number of digit min 1")
+
+        if len(password) < 8:
+            validation.append("number of digit min 1")
+
+        if validation:
+            raise PydanticCustomError(
+                "password_invalid",
+                "Password does not meet requirements",
+                {"errors": validation},  # ← array appears here
+            )
+
+        return password
 
 
 @user_router.post("/register")
 def register(req: RegisterReq):
     try:
-        validation = pwd_validation(req.password)
-        if len(validation):
-            return {"validation": validation}
-
         with (
             pool.connection() as conn,
             conn.transaction(),
@@ -91,8 +95,8 @@ def register(req: RegisterReq):
 
 
 class LoginReq(BaseModel):
-    username: str = Field(json_schema_extra={"format": "string"})
-    password: str = Field(json_schema_extra={"format": "string"})
+    username: str = Field(min_length=1, json_schema_extra={"format": "string"})
+    password: str = Field(min_length=1, json_schema_extra={"format": "string"})
 
 
 @user_router.post("/login")
