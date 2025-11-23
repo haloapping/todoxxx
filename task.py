@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
@@ -45,7 +46,7 @@ def get_task_by_id(id: str):
                 SELECT * FROM tasks
                 WHERE id = %s
             """
-            task = cur.execute(q, [id]).fetchone()
+            task = jsonable_encoder(cur.execute(q, [id]).fetchone())
 
         return JSONResponse(content={"data": task})
     except Exception as e:
@@ -73,7 +74,7 @@ def create_task(task: CreateTaskReq, payload=Depends(verify_token)):
                 RETURNING *
             """
             params = [str(uuid4()), payload["id"], task.title, task.description]
-            task = cur.execute(q, params).fetchone()
+            task = jsonable_encoder(cur.execute(q, params).fetchone())
 
         return JSONResponse(content={"data": task})
     except Exception as e:
@@ -115,7 +116,7 @@ def update_task_by(id: str, task: UpdateTaskReq):
                 WHERE id = %s
                 RETURNING *
             """
-            task = cur.execute(q, params).fetchone()
+            task = jsonable_encoder(cur.execute(q, params).fetchone())
 
         return JSONResponse(content={"data": task})
     except Exception as e:
@@ -137,7 +138,7 @@ def delete_task_by_id(id: str):
                 WHERE id = %s
                 RETURNING *
             """
-            task = cur.execute(q, [id]).fetchone()
+            task = jsonable_encoder(cur.execute(q, [id]).fetchone())
 
         return JSONResponse(content={"data": task})
     except Exception as e:

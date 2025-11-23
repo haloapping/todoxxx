@@ -5,9 +5,10 @@ from uuid import uuid4
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from psycopg.rows import dict_row
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from auth import verify_token
 from db import pool
@@ -54,7 +55,7 @@ def pwd_validation(pwd: str):
 
 
 class RegisterUserReq(BaseModel):
-    username: str
+    username: str = Field()
     email: EmailStr
     password: str
 
@@ -140,7 +141,7 @@ def get_bio(payload=Depends(verify_token)):
             conn.cursor(row_factory=dict_row) as cur,
         ):
             q = "SELECT id, username, password FROM users WHERE id = %s"
-            user = cur.execute(q, [payload["id"]]).fetchone()
+            user = jsonable_encoder(cur.execute(q, [payload["id"]]).fetchone())
 
         return JSONResponse(content={"data": user})
     except Exception as e:
