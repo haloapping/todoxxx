@@ -55,9 +55,9 @@ def pwd_validation(pwd: str):
 
 
 class RegisterUserReq(BaseModel):
-    username: str = Field()
-    email: EmailStr
-    password: str
+    username: str = Field(json_schema_extra={"format": "string"})
+    email: EmailStr = Field(json_schema_extra={"format": "string"})
+    password: str = Field(json_schema_extra={"format": "string"})
 
 
 @user_router.post("/register")
@@ -91,8 +91,8 @@ def register(req: RegisterUserReq):
 
 
 class LoginUserReq(BaseModel):
-    username: str
-    password: str
+    username: str = Field(json_schema_extra={"format": "string"})
+    password: str = Field(json_schema_extra={"format": "string"})
 
 
 @user_router.post("/login")
