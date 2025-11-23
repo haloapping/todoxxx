@@ -59,7 +59,7 @@ def get_task_by_id(id: str):
             """
             task = jsonable_encoder(cur.execute(q, [id]).fetchone())
 
-        return JSONResponse(content={"data": task})
+        return JSONResponse(content=task)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
