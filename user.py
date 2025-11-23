@@ -109,7 +109,6 @@ def login(req: LoginUserReq):
                 req.password.encode(), user["password"].encode()
             )
             if user and is_password_valid:
-                print("password valid")
                 token_jwt = jwt.encode(
                     payload={"id": user["id"]}, key="secret", algorithm="HS256"
                 )
