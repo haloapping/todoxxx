@@ -5,8 +5,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from scalar_fastapi import get_scalar_api_reference
 
-from task import task_router
-from user import user_router
+from task.route import task_router
+from user.route import user_router
 
 app = FastAPI(summary="Todo App", description="Todo App")
 app.include_router(user_router)
