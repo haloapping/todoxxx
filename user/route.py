@@ -56,7 +56,13 @@ def login(req: LoginReq):
             )
             if user and is_password_valid:
                 token_jwt = jwt.encode(
-                    payload={"id": user["id"]}, key="secret", algorithm="HS256"
+                    payload={
+                        "id": user["id"],
+                        "iat": datetime.now(timezone.utc),
+                        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+                    },
+                    key="secret",
+                    algorithm="HS256",
                 )
                 return JSONResponse(
                     content={
